@@ -6,6 +6,7 @@ import copy
 import random
 import math
 Semilla=0
+fac=0
 def llenar(inicio,fin,lista,A):
     j=0
     while j<len(lista)-1:
@@ -39,12 +40,14 @@ def FactorContagio(contagios): # calcula el factor de contagios de una semana
     aux=[]
     fin=len(contagios)-1
     global region
+    global fac
     while inicio<fin-1:
         factor=contagios[inicio+1]/contagios[inicio]
         if contagios[inicio+1]==0 or contagios[inicio]==0:
             factor=0.1
         elif factor>5:
             factor=factor
+        factor=factor+fac
         aux.append(factor)
         inicio=inicio+1
     aux.sort()
@@ -80,7 +83,7 @@ def SeleccionFactor(factor): #selecciona uno de los factores de contagios
     random.seed(Semilla)
     aux=random.randint(0,9)
     Semilla=Semilla+1
-    if 0<=aux<6:
+    if 0<=aux<7:
         return factor[len(factor)-1] # retorna el calculo de factor promedio
     else:
         random.seed(Semilla)
@@ -89,10 +92,34 @@ def SeleccionFactor(factor): #selecciona uno de los factores de contagios
         return factor[aux]
 
 
-def proyeccionInicial(inicio,CS,SS):
-    fin=inicio+14
+
+# def SeleccionFactor(factor): #selecciona uno de los factores de contagios
+#     global Semilla
+#     random.seed(Semilla)
+#     aux=random.randint(0,9)
+#     Semilla=Semilla+1
+#     if 0<=aux<7:
+#         return factor[len(factor)-1] # retorna el calculo de factor promedio
+#     else:
+#         random.seed(Semilla)
+#         aux=random.randint(0,9) # retorna el factor de contagio de algun dia
+#         Semilla=Semilla+1
+#         random.seed(Semilla)
+#         aux3=random.randint(1,9)
+#         Semilla=Semilla+1
+#         if 0<=aux<6:
+#             aux2=factor[len(factor)-1]+(aux3/10)
+#         else:
+#             if (aux3/10)>=factor[len(factor)-1]:
+#                 aux2=factor[len(factor)-1]-(aux3/100)
+#             else:
+#                 aux2=factor[len(factor)-1]-(aux3/10)
+#         return aux2
+
+def proyeccionInicial(inicio,CS,SS,dias):
+    fin=inicio+dias
     aux=[]
-    VInicial=CS[inicio+13]+SS[inicio+13]
+    VInicial=CS[inicio+(dias-1)]+SS[inicio+(dias-1)]
     if VInicial==0:
         VInicial=1
     i=copy.copy(inicio)
@@ -100,7 +127,6 @@ def proyeccionInicial(inicio,CS,SS):
         aux.append(CS[i]+SS[i])
         i=i+1
     factor=FactorContagio(aux)
-    print(factor)
     aux=[]
     while inicio<fin:
         seleccion=SeleccionFactor(factor)
@@ -114,18 +140,17 @@ def proyeccionInicial(inicio,CS,SS):
 
 
 
-def proyeccion(inicio,contagios,CS,SS):
-    fin=inicio+14
+def proyeccion(inicio,contagios,CS,SS,dias):
+    fin=inicio+dias
     aux=[]
     VInicial=contagios[len(contagios)-1]
     if VInicial==0:
         VInicial=1
     i=copy.copy(inicio)
     while i<fin:
-        aux.append(CS[i+14]+SS[i+14])
+        aux.append(CS[i+(dias-1)]+SS[i+(dias-1)])
         i=i+1
     factor=FactorContagio(aux)
-    print(factor)
     aux=[]
     while inicio<fin:
         seleccion=SeleccionFactor(factor)
@@ -144,15 +169,42 @@ def agregar(lista,region):
         region.append(lista[i])
         i=i+1
 
-def comparacion(CS,SS,proyectado):
+def comparacion(CS,SS,proyectado,dias):
     i=0
     err=[]
     while i<len(proyectado):
-        error=((proyectado[i]-(CS[i+14]+SS[i+14]))/(CS[i+14]+SS[i+14]))*100
+        aux=CS[i+dias]+SS[i+dias]
+        if aux ==0:
+            aux=1
+        error=((proyectado[i]-(CS[i+dias]+SS[i+dias]))/(aux))*100
+        if error<0:
+            error=error*(-1)
         err.append(error)
         i=i+1
     return err
 
+def promedio(error):
+    i=0
+    aux=0
+    while i<len(error):
+        aux=aux+error[i]
+        i=i+1
+    err=aux/len(error)
+    return err
+
+
+def solver(CS_ut,SS_ut,Nregion,dias,region):
+    i=0
+    while i<5:
+        if i==0:
+            aux=proyeccionInicial(0,CS_ut[Nregion],SS_ut[Nregion],dias)
+        else:
+            if i ==1:
+                aux=proyeccion(0,region,CS_ut[Nregion],SS_ut[Nregion],dias)
+            else:
+                aux=proyeccion((dias*(i-1)),region,CS_ut[Nregion],SS_ut[Nregion],dias)
+        agregar(aux,region)
+        i=i+1
 
 CSintomas=read_csv('CasosNuevosConSintomas.csv')
 SSintomas=read_csv('CasosNuevosSinSintomas.csv')
@@ -182,35 +234,13 @@ losrios=[]
 loslagos=[]
 aysen=[]
 magallanes=[]
-aricaI=[]
 
 llenar(58,933,CS_it,CS_ut)
 llenar(1,876,SS_it,SS_ut)
+i=0
+dias=14
+solver(CS_ut,SS_ut,0,dias,arica)
 
-region=0
-aux=proyeccionInicial(0,CS_ut[region],SS_ut[region]) # dia 7 al 13
-agregar(aux,arica)
-aux=proyeccion(0,arica,CS_ut[region],SS_ut[region]) # dia 14 al 20
-agregar(aux,arica)
-aux=proyeccion(14,arica,CS_ut[region],SS_ut[region]) # dia 21 al 27
-agregar(aux,arica)
-aux=proyeccion(28,arica,CS_ut[region],SS_ut[region]) # dia 28 al 34
-agregar(aux,arica)
-aux=proyeccion(42,arica,CS_ut[region],SS_ut[region]) # dia 35 al 41
-agregar(aux,arica)
-# print(comparacion(CS_ut[region],SS_ut[region],arica))
-# print(arica)
+print(arica)
+print(promedio(comparacion(CS_ut[region],SS_ut[region],arica,dias)))
 
-# region=6
-# aux=proyeccionInicial(0,CS_ut[region],SS_ut[region]) # dia 7 al 13
-# agregar(aux,metropolitana)
-# aux=proyeccion(0,metropolitana,CS_ut[region],SS_ut[region]) # dia 14 al 20
-# agregar(aux,metropolitana)
-# aux=proyeccion(14,metropolitana,CS_ut[region],SS_ut[region]) # dia 21 al 27
-# agregar(aux,metropolitana)
-# aux=proyeccion(28,metropolitana,CS_ut[region],SS_ut[region]) # dia 28 al 34
-# agregar(aux,metropolitana)
-# aux=proyeccion(42,metropolitana,CS_ut[region],SS_ut[region]) # dia 35 al 41
-# agregar(aux,metropolitana)
-# print(comparacion(CS_ut[region],SS_ut[region],metropolitana))
-# print(metropolitana)
